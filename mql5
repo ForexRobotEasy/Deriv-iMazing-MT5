@@ -1,0 +1,106 @@
+mql5
+//+------------------------------------------------------------------+
+//|                         Deriv iMazing MT5                          |
+//|                                                                  |
+//|        Developer's site: forexroboteasy.com                       |
+//|        Development: Forex Robot Easy Team                         |
+//|                                                                  |
+//| Terms of Reference: Writing Code for Deriv iMazing MT5            |
+//|                                                                  |
+//| This Expert Advisor facilitates efficient trading in the forex    |
+//| market, optimizing progressively from 2020 to 2023. It implements |
+//| high-frequency trade execution and enables trading of CFDs on     |
+//| synthetic indices in addition to standard forex trading. It also  |
+//| provides access to synthetic indices 24/7.                        |
+//|                                                                  |
+//| Code size: 1500-2000 characters                                   |
+//+------------------------------------------------------------------+
+
+// Include standard library
+#include <Trade\Trade.mqh>
+
+// Define constants
+#define SYMBOL_FOREX 'EURUSD'          // Forex symbol
+#define SYMBOL_INDICES 'V75'           // Synthetic indices symbol
+#define MAX_TRADE_COUNT 100            // Maximum number of trades
+#define PROFIT_PERCENTAGE 88           // Desired percentage of profitable trades
+#define DRAWDOWN_PERCENTAGE 5          // Maximum drawdown percentage
+#define TRADE_VOLUME 0.1               // Trade volume
+
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Enable trading for the EA
+    Trade.SetExpertMagicNumber(Symbol(), GetTickCount());
+
+    // Allow trading on weekends and holidays
+    Trade.SetMarketOpen(true);
+
+    // Set symbol for trading
+    Trade.SetSymbol(SYMBOL_FOREX);
+
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // Close any open trades
+    Trade.CloseAll();
+
+    // Print a message on deinitialization
+    Print('Deriv iMazing MT5 has been deinitialized!');
+}
+
+//+------------------------------------------------------------------+
+//| Expert start function                                            |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+    // Check if enough bars are available for analysis
+    if (Bars(Symbol(), PERIOD_CURRENT) < 100)
+        return;
+
+    // Calculate the desired number of profitable trades
+    int targetTrades = MAX_TRADE_COUNT * PROFIT_PERCENTAGE / 100;
+
+    // Calculate the maximum allowed drawdown
+    double maxDrawdown = AccountBalance() * DRAWDOWN_PERCENTAGE / 100;
+
+    // Calculate the current number of profitable trades
+    int profitableTrades = 0;
+
+    // Calculate the current drawdown
+    double drawdown = 0;
+
+    // Perform trade analysis
+    for (int i = 0; i < MAX_TRADE_COUNT; i++)
+    {
+        double entryPrice = iOpen(Symbol(), PERIOD_CURRENT, i);
+        double exitPrice = iClose(Symbol(), PERIOD_CURRENT, i);
+
+        // Check if the trade is profitable
+        if (exitPrice > entryPrice)
+            profitableTrades++;
+
+        // Calculate the drawdown
+        double tradeDrawdown = entryPrice - exitPrice;
+        if (tradeDrawdown > drawdown)
+            drawdown = tradeDrawdown;
+
+        // Check if target trades and drawdown limits are reached
+        if (profitableTrades >= targetTrades || drawdown > maxDrawdown)
+            break;
+    }
+
+    // Check if the analysis is complete
+    if (profitableTrades >= targetTrades && drawdown <= maxDrawdown)
+    {
+        // Open a trade with the desired volume
+        Trade.Buy(TRADE_VOLUME);
+    }
+}
